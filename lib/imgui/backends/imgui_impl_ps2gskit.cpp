@@ -47,8 +47,11 @@ bool ImGui_ImplPs2GsKit_Init(GSGLOBAL *global)
     ImGui_ImplPs2GsKit_Data* bd = IM_NEW(ImGui_ImplPs2GsKit_Data)();
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_ps2gskit";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
     bd->Global = global;
     bd->FontTexture = NULL;
+
+    gsKit_TexManager_init(global);
 
     return true;
 }
@@ -80,6 +83,16 @@ static void ImGui_ImplPs2GsKit_SetupRenderState(ImDrawData* draw_data)
     // TODO: Anything?
 }
 
+static u64 ImGui_ImplPs2GsKit_NormalizeImColor(ImU32 color)
+{
+    u8 r = (color >> IM_COL32_R_SHIFT) & 0xFF;
+    u8 g = (color >> IM_COL32_G_SHIFT) & 0xFF;
+    u8 b = (color >> IM_COL32_B_SHIFT) & 0xFF;
+    u8 a = (color >> IM_COL32_A_SHIFT) & 0xFF;
+    
+    return GS_SETREG_RGBA(r >> 1, g >> 1, b >> 1, a >> 1);
+}
+
 void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
 {
     ImGui_ImplPs2GsKit_Data* bd = ImGui_ImplPs2GsKit_GetBackendData();
@@ -99,6 +112,9 @@ void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1)
 
+    
+    gsKit_TexManager_bind(bd->Global, bd->FontTexture);
+
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
@@ -109,7 +125,8 @@ void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-
+            // GSTEXTURE *texture = (GSTEXTURE *)pcmd->GetTexID();
+            
             if (pcmd->UserCallback)
             {
                 // User callback, registered via ImDrawList::AddCallback()
@@ -122,16 +139,13 @@ void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 // Project scissor/clipping rectangles into framebuffer space
-                // ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
-                // ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
-                // if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
-                //    continue;
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+                   continue;
 
                 // TODO: Apply scissor/clipping rectangle
                 // glScissor((int)clip_min.x, (int)(fb_height - clip_max.y), (int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y));
-
-                GSTEXTURE *texture = (GSTEXTURE *)pcmd->GetTexID();
-                gsKit_TexManager_bind(bd->Global, texture);
 
                 // TODO: Draw triangles
                 for (size_t e = 0; e < pcmd->ElemCount; e += 3) {
@@ -142,23 +156,46 @@ void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
                     ImDrawIdx idx3 = idx_buffer[pcmd->IdxOffset + e + 2];
                     ImDrawVert vtx3 = vtx_buffer[pcmd->VtxOffset + idx3];
 
-                    gsKit_prim_triangle_gouraud(bd->Global, 
-                        vtx1.pos.x, vtx1.pos.y,
-                        vtx2.pos.x, vtx2.pos.y,
-                        vtx3.pos.x, vtx3.pos.y,
-                        1.0,
-                        Red, Green, Blue);
-
-                    // gsKit_prim_triangle_goraud_texture(bd->Global, texture,
-                    //     vtx1.pos.x, vtx1.pos.y, vtx1.uv.x, vtx1.uv.y,
-                    //     vtx2.pos.x, vtx2.pos.y, vtx2.uv.x, vtx2.uv.y,
-                    //     vtx3.pos.x, vtx3.pos.y, vtx3.uv.x, vtx3.uv.y,
-                    //     1.0,
-                    //     Red, Green, Blue);
+                    gsKit_prim_triangle_goraud_texture(bd->Global, bd->FontTexture,
+                        vtx1.pos.x, vtx1.pos.y, vtx1.uv.x, vtx1.uv.y,
+                        vtx2.pos.x, vtx2.pos.y, vtx2.uv.x, vtx2.uv.y,
+                        vtx3.pos.x, vtx3.pos.y, vtx3.uv.x, vtx3.uv.y,
+                        100,
+                        ImGui_ImplPs2GsKit_NormalizeImColor(vtx1.col), 
+                        ImGui_ImplPs2GsKit_NormalizeImColor(vtx2.col), 
+                        ImGui_ImplPs2GsKit_NormalizeImColor(vtx3.col));
                 }
+
+                gsKit_prim_sprite_texture(bd->Global, bd->FontTexture, 
+                    50, 0, 0, 0, 
+                    bd->FontTexture->Width + 50, bd->FontTexture->Height, bd->FontTexture->Width, bd->FontTexture->Height, 
+                    50, 
+                    GS_SETREG_RGBAQ(0x80, 0x80, 0x80, 0x80, 0x00));
             }
         }
     }
+}
+
+int gsKit_texture2_finish(GSGLOBAL *gsGlobal, GSTEXTURE *Texture) {
+    if (!Texture->Delayed) {
+        Texture->Vram = gsKit_vram_alloc(gsGlobal, gsKit_texture_size(Texture->Width, Texture->Height, Texture->PSM), GSKIT_ALLOC_USERBUFFER);
+        if(Texture->Vram == GSKIT_ALLOC_ERROR)
+        {
+            printf("VRAM Allocation Failed. Will not upload texture.\n");
+            return -1;
+        }
+
+        // Upload texture
+        gsKit_texture_upload(gsGlobal, Texture);
+
+        // Free texture
+        free(Texture->Mem);
+        Texture->Mem = NULL;
+    } else {
+        gsKit_setup_tbw(Texture);
+    }
+
+    return 0;
 }
 
 bool ImGui_ImplPs2GsKit_CreateFontsTexture()
@@ -167,24 +204,41 @@ bool ImGui_ImplPs2GsKit_CreateFontsTexture()
     ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplPs2GsKit_Data* bd = ImGui_ImplPs2GsKit_GetBackendData();
     unsigned char* pixels;
-    int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders.
+    int width, height, bpp;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height, &bpp);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders.
 
     // TODO: use gsKit to create a font texture
-    bd->FontTexture = (GSTEXTURE *)malloc(sizeof(GSTEXTURE));
-    memset(bd->FontTexture, 0, sizeof(GSTEXTURE));
+    bd->FontTexture = (GSTEXTURE *)calloc(1, sizeof(GSTEXTURE));
     bd->FontTexture->Delayed = 1;
     bd->FontTexture->Width = width;
     bd->FontTexture->Height = height;
     bd->FontTexture->PSM = GS_PSM_CT32;
+    bd->FontTexture->Filter = GS_FILTER_NEAREST;
     bd->FontTexture->Clut = NULL;
     bd->FontTexture->VramClut = 0;
 
     // Copy the pixel data into the texture
-    size_t imageSize = sizeof(u32) * width * height;
-    bd->FontTexture->Mem = (u32 *)memalign(128, imageSize);
-    memcpy(bd->FontTexture->Mem, pixels, imageSize);
-    gsKit_setup_tbw(bd->FontTexture);
+    size_t textureSize = gsKit_texture_size_ee(bd->FontTexture->Width, bd->FontTexture->Height, bd->FontTexture->PSM);
+    bd->FontTexture->Mem = (u32 *)memalign(128, textureSize);
+    memcpy((void *)bd->FontTexture->Mem, (void *)pixels, textureSize);
+    // memset((void *)bd->FontTexture->Mem, 0xFF, textureSize);
+
+    u8 *texMem = (u8 *)bd->FontTexture->Mem;
+
+    // Byte swap each byte?
+    for (size_t i = 0; i < width * height * 4; i += 4) {
+        u8 a = texMem[i],
+            b = texMem[i + 1],
+            g = texMem[i + 2],
+            r = texMem[i + 3];
+        
+        texMem[i] = a;
+        texMem[i + 1] = b;
+        texMem[i + 2] = g;
+        texMem[i + 3] = r;
+    }
+
+    gsKit_texture2_finish(bd->Global, bd->FontTexture);
 
     // Store our identifier
     io.Fonts->SetTexID((ImTextureID)bd->FontTexture);

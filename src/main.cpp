@@ -15,36 +15,34 @@ const u64 White = GS_SETREG_RGBAQ(0xFF,0xFF,0xFF,0x00,0x00);
 const u64 Red = GS_SETREG_RGBAQ(0xFF,0x00,0x00,0x00,0x00);
 const u64 Green = GS_SETREG_RGBAQ(0x00,0xFF,0x00,0x00,0x00);
 const u64 Blue = GS_SETREG_RGBAQ(0x00,0x00,0xFF,0x00,0x00);
+
+const u64 BlueTrans = GS_SETREG_RGBAQ(0x00,0x00,0xFF,0x40,0x00);
+const u64 RedTrans = GS_SETREG_RGBAQ(0xFF,0x00,0x00,0x60,0x00);
+const u64 GreenTrans = GS_SETREG_RGBAQ(0x00,0xFF,0x00,0x50,0x00);
+const u64 WhiteTrans = GS_SETREG_RGBAQ(0xFF,0xFF,0xFF,0x50,0x00);
+
+
 const int passCount = 3;
 
 int main(int argc, char **argv) {
     GSGLOBAL *gsGlobal = gsKit_init_global();
-    // gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
-    // gsGlobal->DoubleBuffering = GS_SETTING_OFF;
-    // gsGlobal->ZBuffering = GS_SETTING_OFF;
-    // gsGlobal->Mode = GS_MODE_DTV_1080I;
-    // gsGlobal->Interlace = GS_INTERLACED;
-    // gsGlobal->Field = GS_FIELD;
-    // gsGlobal->Width = 640;
-    // gsGlobal->Height = 540;
-    // gsGlobal->PSM = GS_PSM_CT16;
-    // gsGlobal->PSMZ = GS_PSMZ_16;
-	// gsGlobal->Dithering = GS_SETTING_ON;
-	// gsGlobal->DoubleBuffering = GS_SETTING_ON;
-	// gsGlobal->ZBuffering = GS_SETTING_ON;
-	// gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
+    gsGlobal->PSM = GS_PSM_CT32;
+    gsGlobal->PSMZ = GS_PSMZ_16S;
+	gsGlobal->Dithering = GS_SETTING_ON;
+	gsGlobal->DoubleBuffering = GS_SETTING_ON;
+	gsGlobal->ZBuffering = GS_SETTING_ON;
+	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	
     dmaKit_init(D_CTRL_RELE_OFF,D_CTRL_MFD_OFF, D_CTRL_STS_UNSPEC,D_CTRL_STD_OFF, D_CTRL_RCYC_8, 1 << DMA_CHANNEL_GIF);
 	dmaKit_chan_init(DMA_CHANNEL_GIF);
 
     gsKit_init_screen(gsGlobal);
-    // gsKit_mode_switch(gsGlobal, GS_PERSISTENT);
-    gsKit_clear(gsGlobal, White);
-	gsKit_set_test(gsGlobal, GS_ZTEST_OFF);
+	gsKit_set_test(gsGlobal, GS_ZTEST_ON);
+	gsKit_set_test(gsGlobal, GS_ATEST_ON);
 
 	gsKit_vram_clear(gsGlobal);
 	gsKit_set_clamp(gsGlobal, GS_CMODE_CLAMP);
-	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0, 1, 0, 1, 128), 0);
+    gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0, 1, 0, 1, 0 ), 0);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -59,6 +57,13 @@ int main(int argc, char **argv) {
 
     bool showDemoWindow = true;
 
+    u8 *atlasPixels;
+    int atlasWidth, atlasHeight, atlasBpp;
+    io.Fonts->GetTexDataAsRGBA32(&atlasPixels, &atlasWidth, &atlasHeight);
+    // FILE* File = fopen("host:atlas_tex.raw", "wb");
+	// fwrite(atlasPixels, atlasWidth * atlasHeight * atlasBpp, 1, File);
+	// fclose(File);
+
     while(1)
 	{
         // Start the Dear ImGui frame
@@ -67,20 +72,41 @@ int main(int argc, char **argv) {
         ImGui::NewFrame();
 
         // ImGui::ShowDemoWindow(&showDemoWindow);
-        ImGui::SetNextWindowPos(ImVec2(15.0, 15.0));
+        ImGui::SetNextWindowPos(ImVec2(10, 10));
         ImGui::SetNextWindowSize(ImVec2(200, 400));
         ImGui::Begin("Hello, world!");
         ImGui::Text("This is some useful text.");
+        if (ImGui::Button("Save"))
+            ;
         ImGui::End();
         ImGui::Render();
 
-		gsKit_clear(gsGlobal, White);
+        gsGlobal->PrimAlphaEnable = GS_SETTING_OFF;
+		gsKit_clear(gsGlobal, DarkGrey);
+        gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
+
         ImGui_ImplPs2GsKit_RenderDrawData(ImGui::GetDrawData());
 
-        // gsKit_prim_triangle_gouraud(gsGlobal, 280.0f, 200.0f,
-        //                     280.0f, 350.0f,
-        //                     180.0f, 350.0f, 5,
-        //                     Blue, Red, Green);
+        gsKit_prim_triangle_gouraud(gsGlobal, 280.0f, 200.0f,
+                            280.0f, 350.0f,
+                            180.0f, 350.0f, 5,
+                            BlueTrans, RedTrans, GreenTrans);
+
+        // for (int y = 0; y < atlasHeight; y++) {
+        //     for (int x = 0; x < atlasWidth; x++) {
+        //         int index = (y * atlasWidth * 4) + (x * 4);
+        //         u8 r = atlasPixels[index + 0];
+        //         u8 g = atlasPixels[index + 1];
+        //         u8 b = atlasPixels[index + 2];
+        //         u8 a = atlasPixels[index + 3];
+                
+        //         if (a < 0x80) {
+        //             // gsKit_prim_point(gsGlobal, x, y, 20, DarkGrey);
+        //         } else {
+        //             gsKit_prim_point(gsGlobal, x, y + 100, 20, Black);
+        //         }
+        //     }
+        // }
 
         gsKit_queue_exec(gsGlobal);
         gsKit_sync_flip(gsGlobal);
