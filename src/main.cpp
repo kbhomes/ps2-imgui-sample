@@ -84,16 +84,21 @@ void gfx_imgui_init(GSGLOBAL *gsGlobal) {
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.Fonts->AddFontFromMemoryCompressedTTF(custom_font_compressed_data, custom_font_compressed_size, 12);
-    // io.Fonts->AddFontFromFileTTF("host:lib/imgui/misc/fonts/DroidSans.ttf", 10.0f);
 
     ImGuiStyle& style = ImGui::GetStyle();
-    style.ItemSpacing = ImVec2(4, 2);
+    style.CellPadding = ImVec2(4, 2);
+    style.ItemSpacing = ImVec2(6, 6);
+    style.ItemInnerSpacing = ImVec2(4, 4);
     style.FrameRounding = 4;
-    style.FramePadding = ImVec2(2, 0);
+    style.FramePadding = ImVec2(10, 2);
+    style.ScrollbarSize = 14;
+    style.GrabMinSize = 10;
+    style.GrabRounding = 2;
     style.WindowBorderSize = 0;
     style.WindowRounding = 2;
     style.WindowPadding = ImVec2(6, 6);
     style.WindowTitleAlign = ImVec2(0.5, 0.5);
+    style.MouseCursorScale = 0.8;
 
     // Setup ImGui backends
     ImGui_ImplPs2Sdk_InitForGsKit(gsGlobal);
@@ -111,21 +116,26 @@ void gfx_render(GSGLOBAL *gsGlobal, bool hires, bool textureManager) {
     ImGui::NewFrame();
 
     {
+        int spacing = 10;
+
         ImGuiIO& io = ImGui::GetIO();
-        ImGui::SetNextWindowPos(ImVec2(10, 10));
-        // ImGui::SetNextWindowSize(ImVec2(gsGlobal->Width - 20, gsGlobal->Height - 20));
-        ImGui::Begin("DualShock 2", NULL, ImGuiWindowFlags_NoResize);
+        ImGui::SetNextWindowPos(ImVec2(spacing, spacing));
+        ImGui::SetNextWindowSize(ImVec2(gsGlobal->Width/2 - 1.5*spacing, gsGlobal->Height - 2*spacing));
+        ImGui::SetNextWindowFocus();
+        ImGui::Begin("PS2 + ImGui", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
         ImGui::ShowStyleEditor();
+        ImGui::End();
 
         // Draw the controller
+        ImGui::SetNextWindowPos(ImVec2(gsGlobal->Width/2 + 0.5*spacing, spacing));
+        ImGui::SetNextWindowSize(ImVec2(gsGlobal->Width/2 - 1.5*spacing, 180));
+        ImGui::Begin("Gamepad", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoInputs);
         {
             // Invert active-low button states, and determine which digital buttons are new since last frame
             padButtonStatus pad;
             padRead(0, 0, &pad);
-            ImGui::GamePadVisualizer(&pad, 300, 150);
+            ImGui::GamePadVisualizer(&pad, ImGui::GetWindowWidth() * 0.95, ImGui::GetWindowHeight() * 0.55);
         }
-
-
         ImGui::End();
     }
 

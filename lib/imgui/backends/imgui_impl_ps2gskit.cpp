@@ -48,6 +48,7 @@ bool ImGui_ImplPs2GsKit_Init(GSGLOBAL *global)
     io.BackendRendererUserData = (void*)bd;
     io.BackendRendererName = "imgui_impl_ps2gskit";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+    io.MouseDrawCursor = true;
     bd->Global = global;
     bd->FontTexture = NULL;
 
@@ -103,6 +104,10 @@ void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
 
     // Setup desired render state
     ImGui_ImplPs2GsKit_SetupRenderState(bd->Global, draw_data);
+    
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -126,6 +131,12 @@ void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
             }
             else
             {
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x, (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+                    continue;
+                    
                 GSTEXTURE *texture = (GSTEXTURE *)pcmd->GetTexID();
                 gsKit_TexManager_bind(bd->Global, texture);
 
