@@ -25,7 +25,7 @@ struct ImGui_ImplPs2Sdk_Data
 {
     GSGLOBAL* Global;
     u64 Time;
-    u16 PreviousGamePadData;
+    u16 PreviousButtons;
 
     ImGui_ImplPs2Sdk_Data()   { memset(this, 0, sizeof(*this)); }
 };
@@ -38,19 +38,6 @@ static ImGui_ImplPs2Sdk_Data* ImGui_ImplPs2Sdk_GetBackendData()
 }
 
 // Functions
-
-// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
-// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
-// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-bool ImGui_ImplPs2Sdk_ProcessEvent(const Ps2Event* event)
-{
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplPs2Sdk_Data* bd = ImGui_ImplPs2Sdk_GetBackendData();
-
-    // TODO: Do we even need to process any event data other than gamepad (done elsewhere)?
-    return true;
-}
 
 static bool ImGui_ImplPs2Sdk_Init(GSGLOBAL* global)
 {
@@ -107,20 +94,20 @@ static void ImGui_ImplPs2Sdk_UpdateGamepads(ImGui_ImplPs2Sdk_Data* bd)
     int gamepadState = padGetState(0, 0);
     if (gamepadState != PAD_STATE_STABLE && gamepadState != PAD_STATE_FINDCTP1) {
         // Controller is not active, so disable it in imgui
-        bd->PreviousGamePadData = 0;
+        bd->PreviousButtons = 0;
         io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
         return;
     }
     
     // Read gamepad data
-    padButtonStatus buttons;
-    if (padRead(0, 0, &buttons)) {
-        // Invert active-low button states, and determine which digital buttons are new since last frame
-        u16 padData = buttons.btns ^ 0xFFFF;
-        u16 newPadData = padData & ~bd->PreviousGamePadData;
-        bd->PreviousGamePadData = padData;
+    padButtonStatus pad;
+    if (padRead(0, 0, &pad)) {
+        // Invert active-low button states
+        u16 buttons = pad.btns ^ 0xFFFF;
+        // u16 newButtons = buttons & ~bd->PreviousButtons;
+        // bd->PreviousButtons = buttons;
 
-        #define MAP_DIGITAL_BUTTON(NAV_NO, BUTTON_MASK) { io.NavInputs[NAV_NO] = (newPadData & BUTTON_MASK) ? 1.0f : 0.0f; }
+        #define MAP_DIGITAL_BUTTON(NAV_NO, BUTTON_MASK) { io.NavInputs[NAV_NO] = (buttons & BUTTON_MASK) ? 1.0f : 0.0f; }
         MAP_DIGITAL_BUTTON(ImGuiNavInput_Activate,   PAD_CROSS);
         MAP_DIGITAL_BUTTON(ImGuiNavInput_Cancel,     PAD_CIRCLE);
         MAP_DIGITAL_BUTTON(ImGuiNavInput_Menu,       PAD_TRIANGLE);
@@ -133,9 +120,8 @@ static void ImGui_ImplPs2Sdk_UpdateGamepads(ImGui_ImplPs2Sdk_Data* bd)
         MAP_DIGITAL_BUTTON(ImGuiNavInput_FocusNext,  PAD_R1);
         MAP_DIGITAL_BUTTON(ImGuiNavInput_TweakSlow,  PAD_L2);
         MAP_DIGITAL_BUTTON(ImGuiNavInput_TweakFast,  PAD_R2);
-        // TODO: Joystick inputs
         #undef MAP_DIGITAL_BUTTON
-        
+
         // Indicate that the gamepad is present
         io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
     }
@@ -158,5 +144,5 @@ void ImGui_ImplPs2Sdk_NewFrame()
     // bd->Time = current_time;
 
     // ImGui_ImplPs2Sdk_UpdateMouseData();
-    // ImGui_ImplPs2Sdk_UpdateGamepads(bd);
+    ImGui_ImplPs2Sdk_UpdateGamepads(bd);
 }

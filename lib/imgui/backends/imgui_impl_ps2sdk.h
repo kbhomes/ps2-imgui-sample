@@ -13,12 +13,8 @@
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API
 #include <gsKit.h>
-
-typedef struct Ps2Event {
-    int Type;
-} Ps2Event;
+#include <libpad.h>
 
 IMGUI_IMPL_API bool     ImGui_ImplPs2Sdk_InitForGsKit(GSGLOBAL* global);
 IMGUI_IMPL_API void     ImGui_ImplPs2Sdk_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplPs2Sdk_NewFrame();
-IMGUI_IMPL_API bool     ImGui_ImplPs2Sdk_ProcessEvent(Ps2Event* event);
