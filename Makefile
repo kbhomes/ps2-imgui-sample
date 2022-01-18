@@ -1,7 +1,8 @@
 DEBUG=1
 
 EE_BIN = ps2_imgui_sample.elf
-EE_OBJS = src/main.o src/drawing/drawing.o src/drawing/drawing_controller.o \
+EE_OBJS = src/main.o src/gfx.o src/pad.o \
+		  src/drawing/drawing.o src/drawing/drawing_controller.o \
 		  src/widgets/widget_cursor.o src/widgets/widget_gamepad.o src/widgets/widget_icon.o src/widgets/widget_misc.o
 EE_LIBS += -lpad
 
