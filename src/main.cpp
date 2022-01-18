@@ -80,10 +80,11 @@ void gfx_imgui_init(GSGLOBAL *gsGlobal) {
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsClassic();
+    ImGuiIO& io = ImGui::GetIO();
+    io.IniFilename = NULL;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-    io.Fonts->AddFontFromMemoryCompressedTTF(custom_font_compressed_data, custom_font_compressed_size, 12);
+    io.Fonts->AddFontFromMemoryCompressedTTF(custom_font_compressed_data, custom_font_compressed_size, 16);
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.CellPadding = ImVec2(4, 2);
@@ -91,14 +92,16 @@ void gfx_imgui_init(GSGLOBAL *gsGlobal) {
     style.ItemInnerSpacing = ImVec2(4, 4);
     style.FrameRounding = 4;
     style.FramePadding = ImVec2(10, 2);
-    style.ScrollbarSize = 14;
+    style.ScrollbarSize = 20;
     style.GrabMinSize = 10;
     style.GrabRounding = 2;
     style.WindowBorderSize = 0;
     style.WindowRounding = 2;
     style.WindowPadding = ImVec2(6, 6);
     style.WindowTitleAlign = ImVec2(0.5, 0.5);
+    style.TouchExtraPadding = ImVec2(8, 8);
     style.MouseCursorScale = 0.8;
+    style.SelectableTextAlign = ImVec2(0, 0.5);
 
     // Setup ImGui backends
     ImGui_ImplPs2Sdk_InitForGsKit(gsGlobal);
@@ -116,30 +119,154 @@ void gfx_render(GSGLOBAL *gsGlobal, bool hires, bool textureManager) {
     ImGui::NewFrame();
 
     {
-        int spacing = 10;
-
         ImGuiIO& io = ImGui::GetIO();
-        ImGui::SetNextWindowPos(ImVec2(spacing, spacing));
-        ImGui::SetNextWindowSize(ImVec2(gsGlobal->Width/2 - 1.5*spacing, gsGlobal->Height - 2*spacing));
-        ImGui::SetNextWindowFocus();
-        ImGui::Begin("PS2 + ImGui", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
-        ImGui::ShowStyleEditor();
-        ImGui::End();
+        static bool selectingSection = false;
+        static int selectedPane = 0;
 
-        // Draw the controller
-        ImGui::SetNextWindowPos(ImVec2(gsGlobal->Width/2 + 0.5*spacing, spacing));
-        ImGui::SetNextWindowSize(ImVec2(gsGlobal->Width/2 - 1.5*spacing, 180));
-        ImGui::Begin("Gamepad", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoInputs);
+        // Draw the welcome text
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(io.DisplaySize);
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 10));
+        ImGui::Begin("PS2 + ImGui", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
         {
-            // Invert active-low button states, and determine which digital buttons are new since last frame
-            padButtonStatus pad;
-            padRead(0, 0, &pad);
-            ImGui::GamePadVisualizer(&pad, ImGui::GetWindowWidth() * 0.95, ImGui::GetWindowHeight() * 0.55);
+            ImGui::PopStyleVar();
+
+            if (selectingSection) {
+                ImGui::SetNextWindowFocus();
+            }
+            ImGui::BeginChild("List", ImVec2(150, 0), true);
+            if (ImGui::Selectable("Introduction", !selectingSection && selectedPane == 0, 0, ImVec2(0, 25))) {
+                selectedPane = 0;
+                selectingSection = false;
+            }
+            if (ImGui::Selectable("Gamepad", !selectingSection && selectedPane == 1, 0, ImVec2(0, 25))) {
+                selectedPane = 1;
+                selectingSection = false;
+            }
+            if (ImGui::Selectable("Style Editor", !selectingSection && selectedPane == 2, 0, ImVec2(0, 25))) {
+                selectedPane = 2;
+                selectingSection = false;
+            }
+            ImGui::EndChild();
+            
+            ImGui::SameLine();
+            ImGui::BeginGroup();
+            if (selectedPane >= 0 && !selectingSection) {
+                ImGui::SetNextWindowFocus();
+            }
+            ImGui::BeginChild("ChildSection", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()), true);
+            {
+                if (selectedPane == 0) {
+                    ImGui::BulletText("D-Pad: Navigate / Modify values");
+                    ImGui::BulletText("Left Joystick: Scroll current window");
+                    ImGui::BulletText("Right Joystick: Move virtual cursor");
+                    ImGui::BulletText("R2: Click with virtual cursor");
+                    ImGui::Separator();
+                    ImGui::BulletText("Triangle:");
+                    ImGui::Indent();
+                    {
+                        ImGui::BulletText("Hold + D-Pad: Resize window");
+                        ImGui::BulletText("Hold + Left Joystick: Move window");
+                        ImGui::BulletText("Hold + L1/R1: Focus windows");
+                    }
+                    ImGui::Unindent();
+                }
+
+                if (selectedPane == 1) {
+                    ImGui::Text("Custom drawn widget!");
+                    ImGui::Separator();
+
+                    // Invert active-low button states, and determine which digital buttons are new since last frame
+                    padButtonStatus pad;
+                    padRead(0, 0, &pad);
+                    ImGui::Widgets::GamePadVisualizer(&pad, ImGui::GetWindowWidth() * 0.95, ImGui::GetWindowHeight() * 0.50);
+                }
+
+                if (selectedPane == 2) {
+                    ImGui::ShowStyleEditor();
+                }
+                
+                if (io.NavInputs[ImGuiNavInput_Menu]) {
+                    selectingSection = true;
+                }
+
+                if (selectingSection) {
+                    ImGui::Widgets::WindowOverlay(0.8f);
+                }
+            }
+            ImGui::EndChild();
+            {
+                ImGui::Widgets::GamePadIcon(ImGui::Widgets::WidgetGamePadIconType_Triangle);
+                ImGui::SameLine();
+                ImGui::Text("Change Section");
+                ImGui::SameLine();
+                
+                ImGui::Widgets::GamePadIcon(ImGui::Widgets::WidgetGamePadIconType_Start);
+                ImGui::SameLine();
+                ImGui::Text("Change Demo Type");
+                ImGui::SameLine();
+            }
+            ImGui::EndGroup();
         }
         ImGui::End();
     }
 
+    // {
+    //     int spacing = 10;
+
+    //     // Draw the welcome text
+    //     ImGui::SetNextWindowPos(ImVec2(spacing, spacing), ImGuiCond_FirstUseEver);
+    //     ImGui::SetNextWindowSize(ImVec2(gsGlobal->Width/2 - 1.5*spacing, gsGlobal->Height/2 - 1.5*spacing), ImGuiCond_FirstUseEver);
+    //     ImGui::Begin("PS2 + ImGui", NULL, ImGuiWindowFlags_NoCollapse);
+    //     {
+    //         if (ImGui::CollapsingHeader("Controls", NULL, ImGuiTreeNodeFlags_DefaultOpen))
+    //         {
+    //             ImGui::BulletText("D-Pad: Navigate / Modify values");
+    //             ImGui::BulletText("Left Joystick: Scroll current window");
+    //             ImGui::BulletText("Right Joystick: Move virtual cursor");
+    //             ImGui::BulletText("R2: Click with virtual cursor");
+    //             ImGui::Separator();
+    //             ImGui::BulletText("Triangle:");
+    //             ImGui::Indent();
+    //             {
+    //                 ImGui::BulletText("Hold + D-Pad: Resize window");
+    //                 ImGui::BulletText("Hold + Left Joystick: Move window");
+    //                 ImGui::BulletText("Hold + L1/R1: Focus windows");
+    //             }
+    //             ImGui::Unindent();
+    //         }
+    //     }
+    //     ImGui::End();
+
+    //     // Draw the controller
+    //     ImGui::SetNextWindowPos(ImVec2(spacing, gsGlobal->Height/2 + spacing/2), ImGuiCond_FirstUseEver);
+    //     ImGui::SetNextWindowSize(ImVec2(gsGlobal->Width/2 - 1.5*spacing, gsGlobal->Height/2 - 1.5*spacing), ImGuiCond_FirstUseEver);
+    //     ImGui::Begin("Gamepad", NULL, ImGuiWindowFlags_NoCollapse);
+    //     {
+    //         ImGui::Text("Custom drawn widget!");
+    //         ImGui::Separator();
+
+    //         // Invert active-low button states, and determine which digital buttons are new since last frame
+    //         padButtonStatus pad;
+    //         padRead(0, 0, &pad);
+    //         ImGui::Widgets::GamePadVisualizer(&pad, ImGui::GetWindowWidth() * 0.95, ImGui::GetWindowHeight() * 0.50);
+    //     }
+    //     ImGui::End();
+
+    //     // Draw the style editor
+    //     ImGui::SetNextWindowPos(ImVec2(gsGlobal->Width/2 + 0.5*spacing, spacing), ImGuiCond_FirstUseEver);
+    //     ImGui::SetNextWindowSize(ImVec2(gsGlobal->Width/2 - 1.5*spacing, gsGlobal->Height - 2*spacing), ImGuiCond_FirstUseEver);
+    //     ImGui::Begin("Style Editor", NULL, ImGuiWindowFlags_NoCollapse);
+    //     ImGui::ShowStyleEditor();
+    //     ImGui::End();
+    // }
+
+    // Draw our custom mouse cursor for this frame; see `widgets/widget_cursor.cpp` for 
+    // examples on how to draw a custom cursor depending on the cursor type. Must be 
+    // called at the end of the frame so ImGui has time to update the cursor type.
+    ImGui::Widgets::MouseCursor();
     ImGui::Render();
+
     ImGui_ImplPs2GsKit_RenderDrawData(ImGui::GetDrawData());
 
     if (hires) {

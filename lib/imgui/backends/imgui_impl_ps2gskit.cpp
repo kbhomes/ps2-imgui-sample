@@ -94,7 +94,7 @@ static u64 ImGui_ImplPs2GsKit_NormalizeImColor(ImU32 color)
     // printf("Normalizing color: r=%d g=%d b=%d a=%d\n", r, g, b, a);
     
     // return GS_SETREG_RGBAQ(0x80, 0x80, 0x80, 0x80, 0);
-    return GS_SETREG_RGBA(r >> 1, g >> 1, b >> 1, a >> 1);
+    return GS_SETREG_RGBA(r >> 1, g >> 1, b >> 1, a >> 2);
 }
 
 void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)

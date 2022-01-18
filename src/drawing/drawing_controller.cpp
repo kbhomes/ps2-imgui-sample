@@ -63,6 +63,11 @@ void draw_controller_start(ImDrawList *draw_list, const ImVec2& center, float si
         ImVec2(center.x - size, center.y + size/2),
         ImVec2(center.x + size, center.y),
         pressed ? ColorCenterButtonPressed : ColorCenterButton);
+    imgui_draw_triangle(draw_list, false,
+        ImVec2(center.x - size, center.y - size/2),
+        ImVec2(center.x - size, center.y + size/2),
+        ImVec2(center.x + size, center.y),
+        ColorGrayMedium);
 }
 
 void draw_controller_select(ImDrawList *draw_list, const ImVec2& center, float size, bool pressed) {
@@ -70,6 +75,10 @@ void draw_controller_select(ImDrawList *draw_list, const ImVec2& center, float s
         ImVec2(center.x - size, center.y - size/2),
         ImVec2(center.x + size, center.y + size/2),
         pressed ? ColorCenterButtonPressed : ColorCenterButton);
+    imgui_draw_rect(draw_list, false,
+        ImVec2(center.x - size, center.y - size/2),
+        ImVec2(center.x + size, center.y + size/2),
+        ColorGrayMedium);
 }
 
 void draw_controller_dpad_left(ImDrawList *draw_list, const ImVec2& center, float size, bool pressed) {
