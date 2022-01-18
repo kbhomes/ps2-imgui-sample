@@ -1,10 +1,6 @@
 #include "widget.h"
 
 void ImGui::Widgets::GamePadVisualizer(padButtonStatus *pad, float width, float height) {
-    ImU32 GrayMedium = IM_COL32(0x40, 0x40, 0x40, 0xFF);
-    ImU32 GrayDark = IM_COL32(0x1A, 0x1A, 0x1A, 0xFF);
-    ImU32 White = IM_COL32_WHITE;
-
     ImU16 buttons = pad->btns ^ 0xFFFF;
 
     const ImVec2 p = ImGui::GetCursorScreenPos();

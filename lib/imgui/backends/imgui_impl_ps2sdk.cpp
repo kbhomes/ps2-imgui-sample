@@ -76,14 +76,6 @@ void ImGui_ImplPs2Sdk_Shutdown()
     IM_DELETE(bd);
 }
 
-static void ImGui_ImplPs2Sdk_UpdateMouseData()
-{
-    ImGui_ImplPs2Sdk_Data* bd = ImGui_ImplPs2Sdk_GetBackendData();
-    ImGuiIO& io = ImGui::GetIO();
-
-    // TODO: Emulate mouse data with the right joystick and R3 button
-}
-
 static void ImGui_ImplPs2Sdk_UpdateGamepads(ImGui_ImplPs2Sdk_Data* bd)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -168,12 +160,8 @@ void ImGui_ImplPs2Sdk_NewFrame()
     io.DisplaySize = ImVec2((float)bd->Global->Width, (float)bd->Global->Height);
     io.DisplayFramebufferScale = ImVec2(1.0, 1.0);
 
-    // TODO: Update the imgui DeltaTime
+    // TODO: Update the imgui DeltaTime from the PS2 clock
     io.DeltaTime = (float)(1.0f / 60.0f);
-    // u64 current_time = ps2_clock();
-    // io.DeltaTime = bd->Time > 0 ? (float)((double)(current_time - bd->Time) / PS2_CLOCKS_PER_SEC) : (float)(1.0f / 60.0f);
-    // bd->Time = current_time;
 
-    // ImGui_ImplPs2Sdk_UpdateMouseData();
     ImGui_ImplPs2Sdk_UpdateGamepads(bd);
 }
