@@ -33,7 +33,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: ps2-imgui-sample-${{ steps.slug.outputs.sha8 }}
-          path: ps2-imgui-sample.elf
+          path: ps2_imgui_sample.elf
 
       - name: Create release
         if: github.ref == 'refs/heads/master'
@@ -42,4 +42,4 @@ jobs:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
           automatic_release_tag: "latest"
           title: "Latest development build"
-          files: ps2-imgui-sample.elf
+          files: ps2_imgui_sample.elf
