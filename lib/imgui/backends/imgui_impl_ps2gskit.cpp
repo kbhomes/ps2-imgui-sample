@@ -139,6 +139,7 @@ void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
                     
                 GSTEXTURE *texture = (GSTEXTURE *)pcmd->GetTexID();
                 gsKit_TexManager_bind(bd->Global, texture);
+                gsKit_set_scissor(bd->Global, GS_SETREG_SCISSOR(clip_min.x, clip_max.x - 1, clip_min.y, clip_max.y - 1));
 
                 for (size_t e = 0; e < pcmd->ElemCount; e += 3) {
                     ImDrawIdx idx1 = idx_buffer[pcmd->IdxOffset + e + 0];
@@ -160,6 +161,9 @@ void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
             }
         }
     }
+
+    // Reset scissor boundaries
+    gsKit_set_scissor(bd->Global, GS_SCISSOR_RESET);
 }
 
 int gsKit_texture2_finish(GSGLOBAL *gsGlobal, GSTEXTURE *Texture) {
