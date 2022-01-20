@@ -97,7 +97,7 @@ static u64 ImGui_ImplPs2GsKit_NormalizeImColor(ImU32 color)
     return GS_SETREG_RGBA(r >> 1, g >> 1, b >> 1, a >> 2);
 }
 
-void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
+void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data, ImVec2 pixelOffset)
 {
     ImGui_ImplPs2GsKit_Data* bd = ImGui_ImplPs2GsKit_GetBackendData();
     IM_ASSERT(bd != NULL && "Did you call ImGui_ImplPs2GsKit_Init()?");
@@ -150,9 +150,9 @@ void ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data)
                     ImDrawVert vtx3 = vtx_buffer[pcmd->VtxOffset + idx3];
                     
                     gsKit_prim_triangle_goraud_texture(bd->Global, texture,
-                        vtx1.pos.x, vtx1.pos.y, vtx1.uv.x * texture->Width, vtx1.uv.y * texture->Height,
-                        vtx2.pos.x, vtx2.pos.y, vtx2.uv.x * texture->Width, vtx2.uv.y * texture->Height,
-                        vtx3.pos.x, vtx3.pos.y, vtx3.uv.x * texture->Width, vtx3.uv.y * texture->Height,
+                        vtx1.pos.x + pixelOffset.x, vtx1.pos.y + pixelOffset.y, vtx1.uv.x * texture->Width, vtx1.uv.y * texture->Height,
+                        vtx2.pos.x + pixelOffset.x, vtx2.pos.y + pixelOffset.y, vtx2.uv.x * texture->Width, vtx2.uv.y * texture->Height,
+                        vtx3.pos.x + pixelOffset.x, vtx3.pos.y + pixelOffset.y, vtx3.uv.x * texture->Width, vtx3.uv.y * texture->Height,
                         20,
                         ImGui_ImplPs2GsKit_NormalizeImColor(vtx1.col), 
                         ImGui_ImplPs2GsKit_NormalizeImColor(vtx2.col), 

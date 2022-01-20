@@ -67,10 +67,10 @@ void gfx_imgui_init(GSGLOBAL *gsGlobal) {
     io.IniFilename = NULL;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.MousePos = ImVec2(0, 0);
-    io.FontGlobalScale = 1.05;
-    io.Fonts->AddFontFromMemoryCompressedTTF(custom_font_compressed_data, custom_font_compressed_size, 14);
+    io.Fonts->AddFontFromMemoryCompressedTTF(custom_font_compressed_data, custom_font_compressed_size, 16);
 
     ImGuiStyle& style = ImGui::GetStyle();
+    style.AntiAliasedLinesUseTex = false;
     style.CellPadding = ImVec2(4, 2);
     style.ItemSpacing = ImVec2(6, 6);
     style.ItemInnerSpacing = ImVec2(4, 4);
@@ -105,14 +105,14 @@ void gfx_render_begin(GSGLOBAL *gsGlobal, bool hires, bool textureManager) {
     ImGui::NewFrame();
 }
 
-void gfx_render_end(GSGLOBAL *gsGlobal, bool hires, bool textureManager) {
+void gfx_render_end(GSGLOBAL *gsGlobal, bool hires, bool textureManager, bool pixelOffset) {
     // Draw our custom mouse cursor for this frame; see `widgets/widget_cursor.cpp` for 
     // examples on how to draw a custom cursor depending on the cursor type. Must be 
     // called at the end of the frame so ImGui has time to update the cursor type.
     ImGui::Widgets::MouseCursor();
     ImGui::Render();
 
-    ImGui_ImplPs2GsKit_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplPs2GsKit_RenderDrawData(ImGui::GetDrawData(), pixelOffset ? ImVec2(-0.5f, -0.5f) : ImVec2(0, 0));
 
     if (hires) {
         gsKit_hires_sync(gsGlobal);

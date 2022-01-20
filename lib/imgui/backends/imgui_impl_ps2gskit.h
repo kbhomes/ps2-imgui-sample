@@ -13,7 +13,7 @@
 IMGUI_IMPL_API bool     ImGui_ImplPs2GsKit_Init(GSGLOBAL *global);
 IMGUI_IMPL_API void     ImGui_ImplPs2GsKit_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplPs2GsKit_NewFrame();
-IMGUI_IMPL_API void     ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data);
+IMGUI_IMPL_API void     ImGui_ImplPs2GsKit_RenderDrawData(ImDrawData* draw_data, ImVec2 pixelOffset = ImVec2(-0.5f, -0.5f));
 
 // Called by Init/NewFrame/Shutdown
 IMGUI_IMPL_API bool     ImGui_ImplPs2GsKit_CreateFontsTexture();

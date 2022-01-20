@@ -68,7 +68,7 @@ void demo_widget_controls_table(const char *id) {
     ImGui::EndTable();
 }
 
-void demo_paned(const ImGuiIO &io, PadStatus *pad_status) {
+void demo_paned(const ImGuiIO &io, PadStatus *pad_status, bool use_pixel_offset) {
     // Whether the user is selecting a section in the left pane
     static bool is_selecting_section = false;
 
@@ -174,7 +174,12 @@ void demo_paned(const ImGuiIO &io, PadStatus *pad_status) {
 
                 ImGui::Widgets::GamePadIcon(ImGui::Widgets::WidgetGamePadIconType_Start);
                 ImGui::SameLine();
-                ImGui::Text("Change Demo Type");
+                ImGui::Text("Change Demo");
+                ImGui::SameLine();
+
+                ImGui::Widgets::GamePadIcon(ImGui::Widgets::WidgetGamePadIconType_Select);
+                ImGui::SameLine();
+                ImGui::Text(use_pixel_offset ? "Disable Pixel Offset" : "Enable Pixel Offset");
                 ImGui::SameLine();
             }
         }
@@ -183,7 +188,7 @@ void demo_paned(const ImGuiIO &io, PadStatus *pad_status) {
     ImGui::End();
 }
 
-void demo_windowed(const ImGuiIO &io, PadStatus *pad_status) {
+void demo_windowed(const ImGuiIO &io, PadStatus *pad_status, bool use_pixel_offset) {
     int spacing = 10;
 
     ImGui::SetNextWindowPos(ImVec2(spacing, spacing), ImGuiCond_FirstUseEver);
@@ -255,6 +260,7 @@ int main(int argc, char **argv) {
     // Rendering data!
     PadStatus pad_status;
     bool use_paned_sample = true;
+    bool use_pixel_offset = true;
 
     while (1) {
         gfx_render_begin(global, hires, use_texture_manager);
@@ -262,9 +268,9 @@ int main(int argc, char **argv) {
         pad_get_status(&pad_status);
 
         if (use_paned_sample) {
-            demo_paned(io, &pad_status);
+            demo_paned(io, &pad_status, use_pixel_offset);
         } else {
-            demo_windowed(io, &pad_status);
+            demo_windowed(io, &pad_status, use_pixel_offset);
         }
 
         // Switch between demo modes if the user clicks the start button
@@ -272,7 +278,12 @@ int main(int argc, char **argv) {
             use_paned_sample = !use_paned_sample;
         }
 
-        gfx_render_end(global, hires, use_texture_manager);
+        // Switch between pixel offsets modes if the user clicks the select button
+        if (pad_status.buttonsNew & PAD_SELECT) {
+            use_pixel_offset = !use_pixel_offset;
+        }
+
+        gfx_render_end(global, hires, use_texture_manager, use_pixel_offset);
     }
 
     return 0;
